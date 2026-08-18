@@ -900,6 +900,46 @@ document.addEventListener('DOMContentLoaded', function() {
     // 添加全局触摸事件监听器以确保移动端响应
     document.body.addEventListener('touchstart', function() {}, { passive: true });
     
+    // 为所有可点击元素添加触摸事件处理
+    const clickableSelectors = [
+        '.action-btn',
+        '.nav-item',
+        '.type-btn',
+        '.stats-type-btn',
+        '.category-btn',
+        '.save-btn',
+        '.setting-item',
+        '.transaction-item',
+        'button',
+        '[onclick]'
+    ];
+    
+    clickableSelectors.forEach(selector => {
+        document.querySelectorAll(selector).forEach(element => {
+            // 添加触摸开始事件
+            element.addEventListener('touchstart', function(e) {
+                this.style.opacity = '0.7';
+            }, { passive: true });
+            
+            // 添加触摸结束事件
+            element.addEventListener('touchend', function(e) {
+                this.style.opacity = '1';
+                // 触发点击事件
+                const clickEvent = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window
+                });
+                this.dispatchEvent(clickEvent);
+            }, { passive: true });
+            
+            // 添加触摸取消事件（如滚动时）
+            element.addEventListener('touchcancel', function(e) {
+                this.style.opacity = '1';
+            }, { passive: true });
+        });
+    });
+    
     document.querySelector('.modal-content')?.addEventListener('click', function(e) {
         e.stopPropagation();
     });

@@ -897,6 +897,9 @@ function switchPage(page) {
 
 // 阻止模态框内容点击冒泡
 document.addEventListener('DOMContentLoaded', function() {
+    // 添加全局触摸事件监听器以确保移动端响应
+    document.body.addEventListener('touchstart', function() {}, { passive: true });
+    
     document.querySelector('.modal-content')?.addEventListener('click', function(e) {
         e.stopPropagation();
     });

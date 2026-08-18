@@ -138,6 +138,9 @@
             cursor: pointer;
             transition: all 0.2s;
             box-shadow: 0 2px 8px var(--shadow);
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            touch-action: manipulation;
+            user-select: none;
         }
         
         .action-btn:active {
@@ -173,10 +176,50 @@
             align-items: center;
             padding: 12px 0;
             border-bottom: 1px solid var(--border);
+            position: relative;
+            transition: transform 0.3s;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            touch-action: pan-y;
+            user-select: none;
         }
         
         .transaction-item:last-child {
             border-bottom: none;
+        }
+
+        /* 滑动删除样式 */
+        .swipeable {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .transaction-content {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            background: var(--bg-secondary);
+            position: relative;
+            z-index: 2;
+            transition: transform 0.3s;
+        }
+
+        .delete-btn {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 80px;
+            background: var(--danger);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 1;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            touch-action: manipulation;
+            user-select: none;
         }
         
         .transaction-icon {
@@ -227,6 +270,188 @@
         .transaction-amount.expense {
             color: var(--danger);
         }
+
+        /* 统计页面样式 */
+        .stats-type-switch {
+            display: flex;
+            background: var(--bg-primary);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+
+        .stats-type-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .stats-type-btn.active {
+            background: var(--bg-secondary);
+            color: var(--primary);
+            box-shadow: 0 2px 4px var(--shadow);
+        }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .stat-icon {
+            font-size: 20px;
+        }
+
+        .stat-name {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .stat-percent {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .stat-bar-bg {
+            height: 8px;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .stat-bar {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+
+        .stat-amount {
+            text-align: right;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .chart-container {
+            margin-top: 20px;
+        }
+
+        .chart-legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 16px;
+            font-size: 14px;
+        }
+
+        /* 设置页面样式 */
+        .setting-section {
+            margin-bottom: 24px;
+        }
+
+        .setting-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            background: var(--bg-primary);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .setting-arrow {
+            color: var(--text-secondary);
+            font-size: 20px;
+        }
+
+        .setting-input {
+            width: 100px;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            text-align: right;
+            font-size: 15px;
+        }
+
+        .setting-select {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            font-size: 15px;
+        }
+
+        /* 开关按钮 */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 28px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+
+        .setting-value {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
         
         /* 底部导航 */
         .bottom-nav {
@@ -256,6 +481,8 @@
             font-size: 12px;
             cursor: pointer;
             transition: color 0.2s;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            touch-action: manipulation;
         }
         
         .nav-item.active {
@@ -318,6 +545,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            touch-action: manipulation;
+            user-select: none;
         }
         
         /* 金额输入 */
@@ -362,6 +592,9 @@
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            touch-action: manipulation;
+            user-select: none;
         }
         
         .type-btn.active {
@@ -397,6 +630,9 @@
             cursor: pointer;
             transition: all 0.2s;
             border: 2px solid transparent;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            touch-action: manipulation;
+            user-select: none;
         }
         
         .category-item.active {
@@ -450,6 +686,9 @@
             font-weight: 600;
             cursor: pointer;
             margin-top: 20px;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            touch-action: manipulation;
+            user-select: none;
         }
         
         .save-btn:active {
@@ -478,6 +717,11 @@
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
         }
         
         @keyframes slideUp {
@@ -554,7 +798,7 @@
     <div id="listPage" class="page">
         <div class="main-content">
             <div class="card">
-                <div class="section-title">全部交易</div>
+                <div class="section-title">全部交易（左滑删除）</div>
                 <ul class="transaction-list" id="allTransactions">
                     <li class="empty-state">
                         <div class="empty-icon">📊</div>
@@ -568,11 +812,20 @@
     <!-- 统计页 -->
     <div id="statsPage" class="page">
         <div class="main-content">
+            <!-- 分类统计 -->
             <div class="card">
-                <div class="section-title">收支统计</div>
-                <p style="text-align: center; color: var(--text-secondary); padding: 40px 0;">
-                    统计功能开发中...
-                </p>
+                <div class="section-title">分类统计</div>
+                <div class="stats-type-switch">
+                    <button class="stats-type-btn active" data-type="expense" onclick="switchStatsType('expense')">支出</button>
+                    <button class="stats-type-btn" data-type="income" onclick="switchStatsType('income')">收入</button>
+                </div>
+                <div id="categoryStats"></div>
+            </div>
+
+            <!-- 趋势图 -->
+            <div class="card">
+                <div class="section-title">收支趋势（近30天）</div>
+                <div id="trendChart"></div>
             </div>
         </div>
     </div>
@@ -580,11 +833,8 @@
     <!-- 设置页 -->
     <div id="settingsPage" class="page">
         <div class="main-content">
-            <div class="card">
-                <div class="section-title">设置</div>
-                <p style="text-align: center; color: var(--text-secondary); padding: 40px 0;">
-                    设置功能开发中...
-                </p>
+            <div class="card" id="settingsContent">
+                <!-- 设置内容由 JS 动态生成 -->
             </div>
         </div>
     </div>

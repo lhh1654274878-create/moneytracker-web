@@ -316,16 +316,34 @@
                     catMap[cat.id] = cat.name;
                 });
 
-                // 转换交易记录
-                const transactions = importData.bills.map(bill => ({
-                    id: bill.id,
-                    type: bill.type,
-                    amount: bill.amount,
-                    category: catMap[bill.cat] || '其他',
-                    note: bill.remark || '',
-                    date: bill.date + 'T12:00:00',
-                    account: '现金'
-                }));
+                // 转换交易记录（增强字段验证）
+                const transactions = importData.bills.map((bill, index) => {
+                    // 验证必填字段
+                    if (!bill.type || !bill.amount || !bill.date) {
+                        throw new Error(`第${index + 1}条记录缺少必填字段：type=${bill.type}, amount=${bill.amount}, date=${bill.date}`);
+                    }
+                    
+                    // 验证类型合法性
+                    if (bill.type !== 'expense' && bill.type !== 'income') {
+                        throw new Error(`第${index + 1}条记录类型错误：${bill.type}，只能是 expense 或 income`);
+                    }
+                    
+                    // 验证金额格式
+                    const amount = parseFloat(bill.amount);
+                    if (isNaN(amount) || amount <= 0) {
+                        throw new Error(`第${index + 1}条记录金额无效：${bill.amount}`);
+                    }
+                    
+                    return {
+                        id: bill.id || `import_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        type: bill.type,
+                        amount: amount,
+                        category: catMap[bill.cat] || '其他',
+                        note: bill.remark || '',
+                        date: bill.date + 'T12:00:00',
+                        account: '现金'
+                    };
+                });
 
                 // 保存到 localStorage（合并模式，不覆盖现有数据）
                 const existingData = JSON.parse(localStorage.getItem('moneytracker_data') || '{}');

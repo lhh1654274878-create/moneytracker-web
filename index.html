@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="钱迹">
+    <meta name="theme-color" content="#3B82F6">
+    <title>钱迹 - 记账应用</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <style>
+        :root {
+            --primary: #3B82F6;
+            --success: #10B981;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --bg-primary: #F8FAFC;
+            --bg-secondary: #FFFFFF;
+            --text-primary: #1F2937;
+            --text-secondary: #6B7280;
+            --border: #E5E7EB;
+            --shadow: rgba(0, 0, 0, 0.05);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            padding-bottom: 70px;
+        }
+        
+        /* 顶部导航栏 */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+        
+        .navbar h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        /* 主内容区 */
+        .main-content {
+            margin-top: 56px;
+            padding: 16px;
+        }
+        
+        /* 卡片样式 */
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 12px var(--shadow);
+        }
+        
+        /* 余额卡片 */
+        .balance-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+        }
+        
+        .balance-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+        
+        .balance-amount {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        
+        .balance-stats {
+            display: flex;
+            justify-content: space-around;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 4px;
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        /* 快捷操作按钮 */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        
+        .action-btn {
+            background: var(--bg-secondary);
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+        
+        .action-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .action-btn.income {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .action-btn.expense {
+            background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+            color: white;
+        }
+        
+        /* 最近交易 */
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .transaction-list {
+            list-style: none;
+        }
+        
+        .transaction-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .transaction-item:last-child {
+            border-bottom: none;
+        }
+        
+        .transaction-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-right: 12px;
+        }
+        
+        .transaction-icon.income {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+        
+        .transaction-icon.expense {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+        
+        .transaction-info {
+            flex: 1;
+        }
+        
+        .transaction-category {
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+        
+        .transaction-note {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        
+        .transaction-amount {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .transaction-amount.income {
+            color: var(--success);
+        }
+        
+        .transaction-amount.expense {
+            color: var(--danger);
+        }
+        
+        /* 底部导航 */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+            box-shadow: 0 -2px 8px var(--shadow);
+        }
+        
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 12px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .nav-item.active {
+            color: var(--primary);
+        }
+        
+        .nav-icon {
+            font-size: 24px;
+        }
+        
+        /* 添加记录模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 200;
+            animation: fadeIn 0.3s;
+        }
+        
+        .modal.show {
+            display: flex;
+            align-items: flex-end;
+        }
+        
+        .modal-content {
+            background: var(--bg-secondary);
+            border-radius: 24px 24px 0 0;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 24px;
+            animation: slideUp 0.3s;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .modal-close {
+            font-size: 28px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            background: none;
+            border: none;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* 金额输入 */
+        .amount-input-wrapper {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        .amount-input {
+            font-size: 48px;
+            font-weight: bold;
+            border: none;
+            background: none;
+            text-align: center;
+            width: 100%;
+            color: var(--text-primary);
+            outline: none;
+        }
+        
+        .amount-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        /* 类型切换 */
+        .type-switch {
+            display: flex;
+            background: var(--bg-primary);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .type-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .type-btn.active {
+            background: var(--bg-secondary);
+            box-shadow: 0 2px 4px var(--shadow);
+        }
+        
+        .type-btn.income.active {
+            color: var(--success);
+        }
+        
+        .type-btn.expense.active {
+            color: var(--danger);
+        }
+        
+        /* 分类选择 */
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .category-item {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background: var(--bg-primary);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        
+        .category-item.active {
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .category-icon {
+            font-size: 24px;
+        }
+        
+        .category-name {
+            font-size: 12px;
+        }
+        
+        /* 表单字段 */
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            background: var(--bg-primary);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        /* 保存按钮 */
+        .save-btn {
+            width: 100%;
+            padding: 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        .save-btn:active {
+            opacity: 0.9;
+        }
+        
+        .save-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+        
+        /* 动画 */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        
+        /* 隐藏页面 */
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <div class="navbar">
+        <h1 id="pageTitle">首页</h1>
+    </div>
+
+    <!-- 首页 -->
+    <div id="homePage" class="page active">
+        <div class="main-content">
+            <!-- 余额卡片 -->
+            <div class="card balance-card">
+                <div class="balance-label">当前余额</div>
+                <div class="balance-amount">¥<span id="totalBalance">0</span></div>
+                <div class="balance-stats">
+                    <div class="stat-item">
+                        <div class="stat-label">本月收入</div>
+                        <div class="stat-value">¥<span id="monthIncome">0</span></div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">本月支出</div>
+                        <div class="stat-value">¥<span id="monthExpense">0</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 快捷操作 -->
+            <div class="card">
+                <div class="quick-actions">
+                    <button class="action-btn income" onclick="openAddModal('income')">
+                        <span>📈</span>
+                        <span>记收入</span>
+                    </button>
+                    <button class="action-btn expense" onclick="openAddModal('expense')">
+                        <span>📉</span>
+                        <span>记支出</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 最近交易 -->
+            <div class="card">
+                <div class="section-title">
+                    <span>最近交易</span>
+                    <span style="font-size: 14px; color: var(--text-secondary); cursor: pointer;" onclick="switchPage('list')">查看全部 →</span>
+                </div>
+                <ul class="transaction-list" id="recentTransactions">
+                    <li class="empty-state">
+                        <div class="empty-icon">📊</div>
+                        <div>暂无交易记录</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 明细页 -->
+    <div id="listPage" class="page">
+        <div class="main-content">
+            <div class="card">
+                <div class="section-title">全部交易</div>
+                <ul class="transaction-list" id="allTransactions">
+                    <li class="empty-state">
+                        <div class="empty-icon">📊</div>
+                        <div>暂无交易记录</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 统计页 -->
+    <div id="statsPage" class="page">
+        <div class="main-content">
+            <div class="card">
+                <div class="section-title">收支统计</div>
+                <p style="text-align: center; color: var(--text-secondary); padding: 40px 0;">
+                    统计功能开发中...
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设置页 -->
+    <div id="settingsPage" class="page">
+        <div class="main-content">
+            <div class="card">
+                <div class="section-title">设置</div>
+                <p style="text-align: center; color: var(--text-secondary); padding: 40px 0;">
+                    设置功能开发中...
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加记录模态框 -->
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">记一笔</h2>
+                <button class="modal-close" onclick="closeAddModal()">×</button>
+            </div>
+
+            <!-- 类型切换 -->
+            <div class="type-switch">
+                <button class="type-btn expense active" data-type="expense" onclick="switchType('expense')">支出</button>
+                <button class="type-btn income" data-type="income" onclick="switchType('income')">收入</button>
+            </div>
+
+            <!-- 金额输入 -->
+            <div class="amount-input-wrapper">
+                <div class="amount-label">金额</div>
+                <input type="number" class="amount-input" id="amountInput" placeholder="0.00" inputmode="decimal" step="0.01">
+            </div>
+
+            <!-- 分类选择 -->
+            <div class="form-group">
+                <div class="form-label">分类</div>
+                <div class="category-grid" id="categoryGrid"></div>
+            </div>
+
+            <!-- 备注 -->
+            <div class="form-group">
+                <label class="form-label">备注（选填）</label>
+                <input type="text" class="form-input" id="noteInput" placeholder="添加备注...">
+            </div>
+
+            <!-- 保存按钮 -->
+            <button class="save-btn" onclick="saveTransaction()">保存</button>
+        </div>
+    </div>
+
+    <!-- 底部导航 -->
+    <div class="bottom-nav">
+        <a class="nav-item active" onclick="switchPage('home')">
+            <div class="nav-icon">🏠</div>
+            <div>首页</div>
+        </a>
+        <a class="nav-item" onclick="switchPage('list')">
+            <div class="nav-icon">📋</div>
+            <div>明细</div>
+        </a>
+        <a class="nav-item" onclick="switchPage('stats')">
+            <div class="nav-icon">📊</div>
+            <div>统计</div>
+        </a>
+        <a class="nav-item" onclick="switchPage('settings')">
+            <div class="nav-icon">⚙️</div>
+            <div>设置</div>
+        </a>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

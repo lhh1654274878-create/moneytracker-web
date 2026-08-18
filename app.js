@@ -19,14 +19,64 @@ class DataManager {
                 { id: '4', name: '微信', balance: 0, type: 'wechat' }
             ],
             categories: {
-                expense: ['餐饮', '交通', '购物', '娱乐', '医疗', '住房', '教育', '通讯', '其他'],
-                income: ['工资', '奖金', '理财', '兼职', '礼金', '报销', '其他']
+                expense: [
+                    {id: 'c1', name: '餐饮', icon: '🍜', color: '#FF9500'},
+                    {id: 'c2', name: '交通', icon: '🚗', color: '#007AFF'},
+                    {id: 'c3', name: '购物', icon: '🛍️', color: '#FF2D55'},
+                    {id: 'c4', name: '住房', icon: '🏠', color: '#5856D6'},
+                    {id: 'c5', name: '娱乐', icon: '🎮', color: '#AF52DE'},
+                    {id: 'c6', name: '医疗', icon: '💊', color: '#FF3B30'},
+                    {id: 'c7', name: '教育', icon: '📚', color: '#5AC8FA'},
+                    {id: 'c8', name: '通讯', icon: '📱', color: '#8E8E93'},
+                    {id: 'c9', name: '其他', icon: '💰', color: '#8E8E93'}
+                ],
+                income: [
+                    {id: 'i1', name: '工资', icon: '💼', color: '#34C759'},
+                    {id: 'i2', name: '奖金', icon: '🎁', color: '#FF9500'},
+                    {id: 'i3', name: '理财', icon: '📈', color: '#5856D6'},
+                    {id: 'i4', name: '兼职', icon: '💻', color: '#5AC8FA'},
+                    {id: 'i5', name: '礼金', icon: '🧧', color: '#FF3B30'},
+                    {id: 'i6', name: '报销', icon: '📄', color: '#8E8E93'},
+                    {id: 'i7', name: '其他', icon: '💰', color: '#8E8E93'}
+                ]
+            },
+            settings: {
+                currency: '¥',
+                startOfWeek: 1, // 1=周一, 0=周日
+                budgetAlert: true,
+                monthlyBudget: 0
             }
         };
     }
 
     saveData() {
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.data));
+        try {
+            const dataStr = JSON.stringify(this.data);
+            // 检查存储容量（localStorage 限制通常为 5-10MB）
+            if (dataStr.length > 4.5 * 1024 * 1024) {
+                // 超过 4.5MB，自动清理 6 个月前的记录
+                const sixMonthsAgo = new Date();
+                sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+                this.data.transactions = this.data.transactions.filter(t => 
+                    new Date(t.date) > sixMonthsAgo
+                );
+                console.warn('已自动清理 6 个月前的记录以节省空间');
+            }
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.data));
+        } catch (e) {
+            if (e.name === 'QuotaExceededError') {
+                alert('存储空间已满，请导出数据后清理旧记录');
+                // 紧急清理：仅保留最近 3 个月
+                const threeMonthsAgo = new Date();
+                threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+                this.data.transactions = this.data.transactions.filter(t => 
+                    new Date(t.date) > threeMonthsAgo
+                );
+                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.data));
+            } else {
+                throw e;
+            }
+        }
     }
 
     addTransaction(transaction) {
@@ -104,6 +154,81 @@ class DataManager {
     getAccounts() {
         return this.data.accounts;
     }
+
+    // 获取分类统计（按月）
+    getCategoryStats(type, month = null) {
+        const now = new Date();
+        const targetMonth = month || now.getMonth();
+        const targetYear = now.getFullYear();
+        
+        const filtered = this.data.transactions.filter(t => {
+            const date = new Date(t.date);
+            return t.type === type && 
+                   date.getMonth() === targetMonth && 
+                   date.getFullYear() === targetYear;
+        });
+
+        const stats = {};
+        filtered.forEach(t => {
+            if (!stats[t.category]) {
+                stats[t.category] = 0;
+            }
+            stats[t.category] += parseFloat(t.amount);
+        });
+
+        return Object.entries(stats)
+            .map(([name, amount]) => ({name, amount}))
+            .sort((a, b) => b.amount - a.amount);
+    }
+
+    // 获取每日统计
+    getDailyStats(days = 30) {
+        const now = new Date();
+        const stats = [];
+        
+        for (let i = days - 1; i >= 0; i--) {
+            const date = new Date(now);
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+            
+            const dayTransactions = this.data.transactions.filter(t => 
+                t.date.startsWith(dateStr)
+            );
+            
+            const income = dayTransactions
+                .filter(t => t.type === 'income')
+                .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+            
+            const expense = dayTransactions
+                .filter(t => t.type === 'expense')
+                .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+            
+            stats.push({
+                date: dateStr,
+                dateLabel: `${date.getMonth() + 1}/${date.getDate()}`,
+                income,
+                expense
+            });
+        }
+        
+        return stats;
+    }
+
+    // 导出数据
+    exportData() {
+        return JSON.stringify(this.data, null, 2);
+    }
+
+    // 获取设置
+    getSettings() {
+        return this.data.settings || {};
+    }
+
+    // 更新设置
+    updateSettings(newSettings) {
+        this.data.settings = {...this.data.settings, ...newSettings};
+        this.saveData();
+    }
 }
 
 // 全局状态
@@ -111,27 +236,6 @@ const dataManager = new DataManager();
 let currentType = 'expense';
 let selectedCategory = '';
 let currentPage = 'home';
-
-// 分类图标映射
-const categoryIcons = {
-    // 支出分类
-    '餐饮': '🍜',
-    '交通': '🚗',
-    '购物': '🛍️',
-    '娱乐': '🎮',
-    '医疗': '💊',
-    '住房': '🏠',
-    '教育': '📚',
-    '通讯': '📱',
-    '其他': '💰',
-    // 收入分类
-    '工资': '💼',
-    '奖金': '🎁',
-    '理财': '📈',
-    '兼职': '💻',
-    '礼金': '🧧',
-    '报销': '📄'
-};
 
 // 页面初始化
 document.addEventListener('DOMContentLoaded', function() {
@@ -194,23 +298,26 @@ function renderRecentTransactions() {
         return;
     }
     
-    container.innerHTML = transactions.map(t => `
+    container.innerHTML = transactions.map(t => {
+        const cat = getCategoryInfo(t.category, t.type);
+        const categoryName = cat.name || t.category || '未分类';
+        return `
         <li class="transaction-item">
             <div class="transaction-icon ${t.type}">
-                ${categoryIcons[t.category] || '💰'}
+                ${cat.icon}
             </div>
             <div class="transaction-info">
-                <div class="transaction-category">${t.category}</div>
+                <div class="transaction-category">${categoryName}</div>
                 <div class="transaction-note">${t.note || formatDate(t.date)}</div>
             </div>
             <div class="transaction-amount ${t.type}">
                 ${t.type === 'income' ? '+' : '-'}¥${formatMoney(parseFloat(t.amount))}
             </div>
         </li>
-    `).join('');
+    `}).join('');
 }
 
-// 渲染全部交易
+// 渲染全部交易（支持删除）
 function renderAllTransactions() {
     const container = document.getElementById('allTransactions');
     const transactions = dataManager.getAllTransactions();
@@ -225,20 +332,83 @@ function renderAllTransactions() {
         return;
     }
     
-    container.innerHTML = transactions.map(t => `
-        <li class="transaction-item" onclick="deleteTransactionConfirm('${t.id}')">
-            <div class="transaction-icon ${t.type}">
-                ${categoryIcons[t.category] || '💰'}
+    container.innerHTML = transactions.map(t => {
+        const cat = getCategoryInfo(t.category, t.type);
+        const categoryName = cat.name || t.category || '未分类';
+        return `
+        <li class="transaction-item swipeable" data-id="${t.id}">
+            <div class="transaction-content">
+                <div class="transaction-icon ${t.type}">
+                    ${cat.icon}
+                </div>
+                <div class="transaction-info">
+                    <div class="transaction-category">${categoryName}</div>
+                    <div class="transaction-note">${t.note || formatDate(t.date)}</div>
+                </div>
+                <div class="transaction-amount ${t.type}">
+                    ${t.type === 'income' ? '+' : '-'}¥${formatMoney(parseFloat(t.amount))}
+                </div>
             </div>
-            <div class="transaction-info">
-                <div class="transaction-category">${t.category}</div>
-                <div class="transaction-note">${t.note || formatDate(t.date)}</div>
-            </div>
-            <div class="transaction-amount ${t.type}">
-                ${t.type === 'income' ? '+' : '-'}¥${formatMoney(parseFloat(t.amount))}
+            <div class="delete-btn" onclick="deleteTransactionConfirm('${t.id}')">
+                🗑️ 删除
             </div>
         </li>
-    `).join('');
+    `}).join('');
+
+    // 添加滑动删除功能
+    setupSwipeDelete();
+}
+
+// 设置滑动删除
+function setupSwipeDelete() {
+    const items = document.querySelectorAll('.swipeable');
+    items.forEach(item => {
+        let startX = 0;
+        let currentX = 0;
+        let isDragging = false;
+        const content = item.querySelector('.transaction-content');
+
+        item.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+            isDragging = true;
+            content.style.transition = 'none';
+        });
+
+        item.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            currentX = e.touches[0].clientX;
+            const diff = startX - currentX;
+            
+            if (diff > 0 && diff < 80) {
+                content.style.transform = `translateX(-${diff}px)`;
+            }
+        });
+
+        item.addEventListener('touchend', () => {
+            const diff = startX - currentX;
+            content.style.transition = 'transform 0.3s';
+            if (diff > 40) {
+                content.style.transform = 'translateX(-80px)';
+            } else {
+                content.style.transform = 'translateX(0)';
+            }
+            isDragging = false;
+        });
+        
+        // 点击其他区域时收回删除按钮
+        document.addEventListener('touchstart', (e) => {
+            if (!item.contains(e.target)) {
+                content.style.transform = 'translateX(0)';
+            }
+        });
+    });
+}
+
+// 获取分类信息
+function getCategoryInfo(name, type) {
+    const categories = dataManager.getCategories(type);
+    const found = categories.find(c => c.name === name);
+    return found || {name: name || '未分类', icon: '💰', color: '#8E8E93'};
 }
 
 // 删除交易确认
@@ -247,7 +417,13 @@ function deleteTransactionConfirm(id) {
         dataManager.deleteTransaction(id);
         updateDashboard();
         renderRecentTransactions();
-        renderAllTransactions();
+        if (currentPage === 'list') {
+            renderAllTransactions();
+        }
+        if (currentPage === 'stats') {
+            renderStats();
+        }
+        showToast('已删除');
     }
 }
 
@@ -297,10 +473,10 @@ function renderCategories() {
     const categories = dataManager.getCategories(currentType);
     
     container.innerHTML = categories.map(cat => `
-        <div class="category-item ${selectedCategory === cat ? 'active' : ''}" 
-             onclick="selectCategory('${cat}')">
-            <div class="category-icon">${categoryIcons[cat] || '💰'}</div>
-            <div class="category-name">${cat}</div>
+        <div class="category-item ${selectedCategory === cat.name ? 'active' : ''}" 
+             onclick="selectCategory('${cat.name}')">
+            <div class="category-icon">${cat.icon}</div>
+            <div class="category-name">${cat.name}</div>
         </div>
     `).join('');
 }
@@ -316,20 +492,31 @@ function saveTransaction() {
     const amount = document.getElementById('amountInput').value;
     const note = document.getElementById('noteInput').value;
     
-    // 验证
-    if (!amount || parseFloat(amount) <= 0) {
-        alert('请输入有效的金额');
+    // 验证金额
+    if (!amount || amount.trim() === '') {
+        showToast('请输入金额');
+        return;
+    }
+    
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        showToast('请输入有效的金额');
+        return;
+    }
+    
+    if (parsedAmount > 99999999) {
+        showToast('金额不能超过 9999 万');
         return;
     }
     
     if (!selectedCategory) {
-        alert('请选择分类');
+        showToast('请选择分类');
         return;
     }
     
     // 创建交易记录
     const transaction = {
-        amount: parseFloat(amount),
+        amount: parsedAmount,
         type: currentType,
         category: selectedCategory,
         account: '现金', // 默认账户
@@ -344,6 +531,9 @@ function saveTransaction() {
     renderRecentTransactions();
     if (currentPage === 'list') {
         renderAllTransactions();
+    }
+    if (currentPage === 'stats') {
+        renderStats();
     }
     
     // 关闭模态框
@@ -378,6 +568,298 @@ function showToast(message) {
     }, 2000);
 }
 
+// 渲染统计页面
+function renderStats() {
+    renderCategoryChart('expense');
+    renderTrendChart();
+}
+
+// 渲染分类统计图
+function renderCategoryChart(type) {
+    const stats = dataManager.getCategoryStats(type);
+    const container = document.getElementById('categoryStats');
+    
+    if (stats.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div>暂无数据</div></div>';
+        return;
+    }
+
+    const total = stats.reduce((sum, s) => sum + s.amount, 0);
+    const maxAmount = Math.max(...stats.map(s => s.amount));
+    
+    container.innerHTML = stats.map(s => {
+        const percent = ((s.amount / total) * 100).toFixed(1);
+        const barWidth = (s.amount / maxAmount) * 100;
+        const cat = getCategoryInfo(s.name, type);
+        
+        return `
+            <div class="stat-item">
+                <div class="stat-header">
+                    <span class="stat-icon">${cat.icon}</span>
+                    <span class="stat-name">${s.name}</span>
+                    <span class="stat-percent">${percent}%</span>
+                </div>
+                <div class="stat-bar-bg">
+                    <div class="stat-bar" style="width: ${barWidth}%; background: ${cat.color};"></div>
+                </div>
+                <div class="stat-amount">¥${formatMoney(s.amount)}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// 切换统计类型
+function switchStatsType(type) {
+    document.querySelectorAll('.stats-type-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === type);
+    });
+    renderCategoryChart(type);
+}
+
+// 渲染趋势图
+function renderTrendChart() {
+    const stats = dataManager.getDailyStats(30);
+    const container = document.getElementById('trendChart');
+    
+    if (stats.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📈</div><div>暂无数据</div></div>';
+        return;
+    }
+
+    const maxValue = Math.max(...stats.map(s => Math.max(s.income, s.expense))) || 1;
+    const chartHeight = 200;
+    
+    container.innerHTML = `
+        <div class="chart-container">
+            <svg width="100%" height="${chartHeight}" style="overflow: visible;">
+                ${stats.map((s, i) => {
+                    const x = (i / (stats.length - 1)) * 100;
+                    const incomeHeight = (s.income / maxValue) * (chartHeight - 40);
+                    const expenseHeight = (s.expense / maxValue) * (chartHeight - 40);
+                    const barWidth = 100 / stats.length * 0.6;
+                    
+                    return `
+                        <g>
+                            <rect x="${x}%" y="${chartHeight - 30 - incomeHeight}" 
+                                  width="${barWidth}%" height="${incomeHeight}" 
+                                  fill="#10B981" opacity="0.7" rx="2"/>
+                            <rect x="${x + barWidth}%" y="${chartHeight - 30 - expenseHeight}" 
+                                  width="${barWidth}%" height="${expenseHeight}" 
+                                  fill="#EF4444" opacity="0.7" rx="2"/>
+                            ${i % 5 === 0 ? `<text x="${x + barWidth}%" y="${chartHeight - 10}" 
+                                fill="#6B7280" font-size="10" text-anchor="middle">
+                                ${s.dateLabel}
+                            </text>` : ''}
+                        </g>
+                    `;
+                }).join('')}
+            </svg>
+            <div class="chart-legend">
+                <span><span style="color: #10B981;">●</span> 收入</span>
+                <span><span style="color: #EF4444;">●</span> 支出</span>
+            </div>
+        </div>
+    `;
+}
+
+// 渲染设置页面
+function renderSettings() {
+    const settings = dataManager.getSettings();
+    const container = document.getElementById('settingsContent');
+    
+    container.innerHTML = `
+        <div class="setting-section">
+            <div class="setting-title">数据管理</div>
+            <div class="setting-item" onclick="triggerImport()">
+                <span>📥 导入数据</span>
+                <span class="setting-arrow">›</span>
+            </div>
+            <div class="setting-item" onclick="exportDataToFile()">
+                <span>📤 导出数据</span>
+                <span class="setting-arrow">›</span>
+            </div>
+            <div class="setting-item" onclick="clearAllData()">
+                <span style="color: #EF4444;">🗑️ 清空数据</span>
+                <span class="setting-arrow">›</span>
+            </div>
+        </div>
+
+        <div class="setting-section">
+            <div class="setting-title">预算设置</div>
+            <div class="setting-item">
+                <span>每月预算</span>
+                <input type="number" class="setting-input" 
+                       value="${settings.monthlyBudget || 0}" 
+                       onchange="updateBudget(this.value)" 
+                       placeholder="0">
+            </div>
+            <div class="setting-item">
+                <span>预算提醒</span>
+                <label class="switch">
+                    <input type="checkbox" ${settings.budgetAlert ? 'checked' : ''} 
+                           onchange="toggleBudgetAlert(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="setting-section">
+            <div class="setting-title">显示设置</div>
+            <div class="setting-item">
+                <span>货币符号</span>
+                <select class="setting-select" onchange="updateCurrency(this.value)">
+                    <option value="¥" ${settings.currency === '¥' ? 'selected' : ''}>¥ 人民币</option>
+                    <option value="$" ${settings.currency === '$' ? 'selected' : ''}>$ 美元</option>
+                    <option value="€" ${settings.currency === '€' ? 'selected' : ''}>€ 欧元</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="setting-section">
+            <div class="setting-title">关于</div>
+            <div class="setting-item">
+                <span>版本信息</span>
+                <span class="setting-value">v1.0.0</span>
+            </div>
+        </div>
+    `;
+}
+
+// 导出数据到文件
+function exportDataToFile() {
+    const data = dataManager.exportData();
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `钱迹备份_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('导出成功');
+}
+
+// 触发导入文件选择
+function triggerImport() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (!file.name.endsWith('.json')) {
+            showToast('请选择 JSON 格式文件');
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const data = JSON.parse(event.target.result);
+                importDataFromFile(data);
+            } catch (error) {
+                showToast('文件格式错误');
+            }
+        };
+        reader.onerror = () => showToast('文件读取失败');
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
+// 导入数据并验证
+function importDataFromFile(data) {
+    // 验证数据结构
+    if (!data || typeof data !== 'object') {
+        showToast('数据格式无效');
+        return;
+    }
+    
+    // 验证必要字段
+    if (!Array.isArray(data.transactions)) {
+        showToast('缺少交易记录字段');
+        return;
+    }
+    
+    // 验证每条记录
+    const validTransactions = data.transactions.filter(t => {
+        return t && 
+               typeof t.id === 'string' &&
+               typeof t.type === 'string' &&
+               (t.type === 'expense' || t.type === 'income') &&
+               typeof t.amount === 'number' &&
+               t.amount > 0 &&
+               typeof t.category === 'string' &&
+               typeof t.date === 'string';
+    });
+    
+    if (validTransactions.length === 0) {
+        showToast('没有有效的交易记录');
+        return;
+    }
+    
+    // 询问导入方式
+    const mode = confirm('点击"确定"合并数据，点击"取消"覆盖现有数据') ? 'merge' : 'replace';
+    
+    if (mode === 'replace') {
+        // 覆盖模式
+        const importData = {
+            transactions: validTransactions,
+            settings: data.settings || {},
+            categories: data.categories || {}
+        };
+        localStorage.setItem('moneytracker_data', JSON.stringify(importData));
+        showToast(`已导入 ${validTransactions.length} 条记录（覆盖模式）`);
+    } else {
+        // 合并模式
+        const existing = dataManager.loadData();
+        const existingIds = new Set(existing.transactions.map(t => t.id));
+        
+        // 过滤重复ID
+        const newTransactions = validTransactions.filter(t => !existingIds.has(t.id));
+        
+        existing.transactions.push(...newTransactions);
+        existing.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        localStorage.setItem('moneytracker_data', JSON.stringify(existing));
+        showToast(`已合并 ${newTransactions.length} 条新记录`);
+    }
+    
+    // 刷新页面
+    location.reload();
+}
+
+// 清空所有数据
+function clearAllData() {
+    if (confirm('确定要清空所有数据吗？此操作不可恢复！')) {
+        if (confirm('再次确认：真的要删除所有记录吗？')) {
+            localStorage.removeItem('moneytracker_data');
+            location.reload();
+        }
+    }
+}
+
+// 更新预算
+function updateBudget(value) {
+    dataManager.updateSettings({ monthlyBudget: parseFloat(value) || 0 });
+    showToast('预算已更新');
+}
+
+// 切换预算提醒
+function toggleBudgetAlert(checked) {
+    dataManager.updateSettings({ budgetAlert: checked });
+    showToast(checked ? '已开启预算提醒' : '已关闭预算提醒');
+}
+
+// 更新货币符号
+function updateCurrency(value) {
+    dataManager.updateSettings({ currency: value });
+    showToast('货币符号已更新');
+    location.reload();
+}
+
 // 切换页面
 function switchPage(page) {
     currentPage = page;
@@ -406,6 +888,10 @@ function switchPage(page) {
     // 渲染对应页面内容
     if (page === 'list') {
         renderAllTransactions();
+    } else if (page === 'stats') {
+        renderStats();
+    } else if (page === 'settings') {
+        renderSettings();
     }
 }
 
